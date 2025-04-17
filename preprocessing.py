@@ -28,20 +28,28 @@ def show_result( before, after):
     plt.tight_layout()  
     plt.show()
 
-def apply_median(image):
-    return filters.median(image)
 
-def hist_matching(image,refr):
-    matched = np.clip(exposure.match_histograms(image,refr),0,255).astype(np.uint8)
-    #matched = apply_median(matched)
-    matched[matched < 20] = 0
-    matched = exposure.equalize_hist(matched,mask=matched<255)
-    #print(exposure.histogram(matched))
+class Preprocessing():
+    def __init__(self,image,refr):
+        self.image = image
+        self.refr = refr
 
-    return matched
+    def apply_threshold(self):
+        self.image[self.image< 40] = 0
 
-def main():
-    pass
+    def apply_median(self):
+        return filters.median(self.image)
+
+    def hist_matching(self):
+        self.apply_threshold()
+        matched = np.clip(exposure.match_histograms(self.image,self.refr),0,255).astype(np.uint8)
+        #matched = apply_median(matched)
+        matched[matched < 20] = 0
+        matched = exposure.equalize_hist(matched,mask=matched<255)
+        #print(exposure.histogram(matched))
+
+        return matched
+
 
 def test():
     REFERENCE_FILENAME = r"Training\notumor\Tr-no_0538.jpg"
@@ -54,10 +62,12 @@ def test():
         print(random_list)
 
         for number in random_list:
-            image = img_as_ubyte(io.imread(rf"Training/notumor/Tr-no_{number:04}.jpg",as_gray=True))
-            image[image< 40] = 0
+            image = img_as_ubyte(io.imread(rf"Training/meningioma/Tr-me_{number:04}.jpg",as_gray=True))
+            
             before_images.append(image)
-            matched = hist_matching(image, refr_img)
+            
+            preprocessing = Preprocessing(image, refr_img)
+            matched = preprocessing.hist_matching()
             after_images.append(matched)
 
         
