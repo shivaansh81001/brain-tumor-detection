@@ -30,8 +30,8 @@ def show_result( before, after):
 
 
 class Preprocessing():
-    def __init__(self,image,refr):
-        self.image = image
+    def __init__(self,refr):
+        self.image = None
         self.refr = refr
 
     def apply_threshold(self):
@@ -40,13 +40,15 @@ class Preprocessing():
     def apply_median(self):
         return filters.median(self.image)
 
-    def hist_matching(self):
+    def hist_matching(self,image):
+        self.image = img_as_ubyte(image)
         self.apply_threshold()
-        matched = np.clip(exposure.match_histograms(self.image,self.refr),0,255).astype(np.uint8)
-        #matched = apply_median(matched)
-        matched[matched < 20] = 0
-        matched = exposure.equalize_hist(matched,mask=matched<255)
-        #print(exposure.histogram(matched))
+        matched= exposure.match_histograms(self.image, self.refr)
+        matched =np.clip(matched, 0, 255)
+        matched=matched.astype(np.uint8)
+        matched[matched <20] =0
+        matched =exposure.equalize_hist(matched, mask=matched < 255)
+        matched=img_as_ubyte(matched)
 
         return matched
 
