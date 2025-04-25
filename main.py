@@ -1,5 +1,9 @@
 from CNN import Classifier
+import random
+import torch
 import torch.nn as nn
+import numpy as np
+import matplotlib.pyplot as plt
 from torchvision import datasets,transforms
 from torch.utils.data import DataLoader,random_split
 from preprocessing import Preprocessing
@@ -7,6 +11,19 @@ from skimage import io,exposure,filters
 from PIL import Image
 from skimage.util import img_as_ubyte
 
+np.random.seed(42)
+
+def show_image_samples(original,modified):
+    fig, axs = plt.subplots(2, 5, figsize=(15,6))
+    for i in range(5):
+        axs[0, i].imshow(original[i], cmap='gray')
+        axs[0, i].set_title(f"Original {i+1}")
+        axs[0, i].axis('off')
+        axs[1, i].imshow(modified[i], cmap='gray')
+        axs[1, i].set_title(f"Modified {i+1}")
+        axs[1, i].axis('off')
+    plt.tight_layout()
+    plt.show()
 
 class Original_dataset:
     class_names=['notumor','pituitary','meningioma','glioma']
@@ -20,8 +37,7 @@ class Original_dataset:
         if transform is None:
             transform = transforms.Compose([
                 transforms.Resize((224, 224)),
-                transforms.ToTensor(),
-                transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010))
+                transforms.ToTensor()
             ])
         
         self.transform = transform 
@@ -47,7 +63,7 @@ class Original_dataset:
         shuffle = (train == 'train')
         self.loader = DataLoader(self.dataset, batch_size=batch_size, shuffle=shuffle)
         if modified:
-            self.images = [Image.fromarray(preprocessing.hist_matching(io.imread(path, as_gray=True))) for path, _ in dataset.samples]
+            self.images =[self.transform(Image.fromarray(preprocessing.hist_matching(io.imread(path, as_gray=True)))) for path, _ in dataset.samples]
         else:
             self.images = [img for img, _ in self.dataset]
         self.labels = [label for _, label in self.dataset]
@@ -59,14 +75,20 @@ class Original_dataset:
     
     def get_loader(self):
         return self.loader
-    
+
+    def get_five_random(self):
+        samples = random.sample(self.images, 5)
+        return [img.permute(1, 2, 0).numpy() for img in samples]
+
 
 
 def main():
     '''============== original dataset =================='''
     original_training = Original_dataset(batch_size=32,train='train')
     original_train_loader = original_training.get_loader()
+    print(type(original_train_loader))
     print("Training size - ",original_training.get_size())
+    sample_original= original_training.get_five_random()
 
     original_validation = Original_dataset(batch_size=32,train='val') 
     original_val_loader= original_validation.get_loader()
@@ -81,6 +103,7 @@ def main():
     modified_training = Original_dataset(batch_size=32,train='train',modified=True)
     modified_train_loader = modified_training.get_loader()
     print(" modified Training size - ",modified_training.get_size())
+    sample_modified = modified_training.get_five_random()
 
     modified_validation = Original_dataset(batch_size=32,train='val',modified=True) 
     modified_val_loader= modified_validation.get_loader()
@@ -89,6 +112,9 @@ def main():
     modified_testing=Original_dataset(batch_size=32,train='test',modified=True)
     modified_test_loader= modified_testing.get_loader()
     print(" modified Testing size - ",modified_testing.get_size())
+
+    '''============== print sample images =================='''
+    show_image_samples(sample_original,sample_modified)
 
 
     model = Classifier()
